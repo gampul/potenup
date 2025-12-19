@@ -1,6 +1,35 @@
 import { google } from "googleapis";
 import { Readable } from "stream";
 
+// 환경 변수 검증
+function validateEnvVars() {
+  const requiredVars = [
+    "GOOGLE_PROJECT_ID",
+    "GOOGLE_PRIVATE_KEY_ID",
+    "GOOGLE_PRIVATE_KEY",
+    "GOOGLE_CLIENT_EMAIL",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_X509_CERT_URL",
+    "GOOGLE_DRIVE_FOLDER_ID",
+  ];
+
+  const missing = requiredVars.filter((varName) => !process.env[varName]);
+
+  if (missing.length > 0) {
+    console.error("❌ Missing environment variables:", missing);
+    throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
+  }
+
+  // GOOGLE_PRIVATE_KEY 형식 확인
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+  if (privateKey && !privateKey.includes("BEGIN PRIVATE KEY")) {
+    console.error("❌ GOOGLE_PRIVATE_KEY format is invalid");
+    throw new Error("GOOGLE_PRIVATE_KEY must contain BEGIN PRIVATE KEY");
+  }
+
+  console.log("✅ All environment variables validated");
+}
+
 // 서비스 계정 인증 정보
 const credentials = {
   type: "service_account",
@@ -20,6 +49,12 @@ const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
 // Google Auth 클라이언트 생성
 function getAuthClient() {
+  validateEnvVars();
+  
+  console.log("🔑 Creating Google Auth client...");
+  console.log("  - Client Email:", process.env.GOOGLE_CLIENT_EMAIL);
+  console.log("  - Folder ID:", FOLDER_ID);
+  
   const auth = new google.auth.GoogleAuth({
     credentials,
     scopes: ["https://www.googleapis.com/auth/drive.file"],
@@ -47,6 +82,11 @@ export async function uploadFileToDrive(
   fileName: string,
   mimeType: string = "text/plain"
 ): Promise<{ fileId: string; webViewLink: string }> {
+  console.log("📤 Starting file upload to Google Drive...");
+  console.log("  - File name:", fileName);
+  console.log("  - MIME type:", mimeType);
+  console.log("  - Buffer size:", fileBuffer.length, "bytes");
+  
   const drive = getDriveClient();
 
   const fileMetadata = {
@@ -60,6 +100,7 @@ export async function uploadFileToDrive(
   };
 
   try {
+    console.log("🚀 Calling Google Drive API...");
     const response = await drive.files.create({
       requestBody: fileMetadata,
       media: media,
@@ -69,12 +110,19 @@ export async function uploadFileToDrive(
     const fileId = response.data.id || "";
     const webViewLink = response.data.webViewLink || "";
 
-    console.log("File uploaded to Google Drive:", { fileId, webViewLink, fileName });
+    console.log("✅ File uploaded successfully to Google Drive:");
+    console.log("  - File ID:", fileId);
+    console.log("  - Web View Link:", webViewLink);
 
     return { fileId, webViewLink };
-  } catch (error) {
-    console.error("Google Drive upload error:", error);
-    throw error;
+  } catch (error: any) {
+    console.error("❌ Google Drive upload error:");
+    console.error("  - Error message:", error.message);
+    console.error("  - Error code:", error.code);
+    console.error("  - Error details:", JSON.stringify(error.errors || error, null, 2));
+    
+    // 더 자세한 에러 정보를 포함한 에러 던지기
+    throw new Error(`Google Drive upload failed: ${error.message}`);
   }
 }
 
