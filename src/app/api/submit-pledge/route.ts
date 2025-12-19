@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadPdfToDrive } from "@/lib/googleDrive";
+import { uploadFileToDrive } from "@/lib/googleDrive";
 import { generatePledgePdfContent } from "@/lib/generatePdfServer";
 
 export async function POST(request: NextRequest) {
@@ -18,14 +18,14 @@ export async function POST(request: NextRequest) {
       signature,
     });
 
-    // 텍스트를 Buffer로 변환 (txt 파일로 저장)
+    // 텍스트를 Buffer로 변환
     const buffer = Buffer.from(pdfContent, "utf-8");
 
-    // 파일명 생성
-    const fileName = `자산관리서약서_${name}_${pledgeDate}.txt`;
+    // 파일명 생성: 자산관리서약서_이름_과정명.pdf
+    const fileName = `자산관리서약서_${name}_${educationName}.pdf`;
 
-    // Google Drive에 업로드
-    const result = await uploadPdfToDrive(buffer, fileName);
+    // Google Drive에 업로드 (PDF mimeType으로)
+    const result = await uploadFileToDrive(buffer, fileName, "application/pdf");
 
     return NextResponse.json({
       success: true,
@@ -41,4 +41,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
