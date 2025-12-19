@@ -107,6 +107,7 @@ export default function PledgeForm() {
 
       // Google Drive에 서약서 업로드
       try {
+        console.log("Google Drive 업로드 시작...");
         const response = await fetch("/api/submit-pledge", {
           method: "POST",
           headers: {
@@ -122,13 +123,21 @@ export default function PledgeForm() {
           }),
         });
 
+        console.log("API Response status:", response.status);
         const result = await response.json();
+        console.log("API Response data:", result);
+
         if (result.success && result.webViewLink) {
           setDriveLink(result.webViewLink);
-          console.log("Google Drive 업로드 성공:", result.webViewLink);
+          console.log("✅ Google Drive 업로드 성공:", result.webViewLink);
+          alert("✅ 서약서가 Google Drive에 저장되었습니다!");
+        } else {
+          console.error("❌ Google Drive 업로드 실패:", result);
+          alert("⚠️ Google Drive 저장 실패: " + (result.error || "알 수 없는 오류"));
         }
       } catch (driveError) {
-        console.error("Google Drive 업로드 오류:", driveError);
+        console.error("❌ Google Drive 업로드 오류:", driveError);
+        alert("⚠️ Google Drive 저장 중 오류 발생");
         // Google Drive 업로드 실패해도 제출은 성공으로 처리
       }
       
